@@ -5,7 +5,6 @@ import "bytes"
 type GapBuffer struct {
 	data []byte
 	gap
-	cursor
 }
 
 func New(size int) *GapBuffer {
@@ -54,11 +53,26 @@ func (buffer *GapBuffer) Delete(n int) {
 	buffer.size++
 }
 
+func (buffer *GapBuffer) Split() []byte {
+	var result = make([]byte, len(buffer.data)-int(buffer.cursor))
+	copy(result, buffer.data[buffer.cursor:])
+	buffer.data = buffer.data[:buffer.cursor]
+	return result
+}
+
 func (buffer *GapBuffer) Bytes() []byte {
 	return append(
 		buffer.data[:buffer.firstIndex()],
 		buffer.data[buffer.lastIndex():]...,
 	)
+}
+
+func (buffer *GapBuffer) String() string {
+	return string(buffer.Bytes())
+}
+
+func (buffer *GapBuffer) Size() int {
+	return len(buffer.data) - buffer.size
 }
 
 func (buffer *GapBuffer) rawBytes() []byte {

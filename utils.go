@@ -6,11 +6,16 @@ func (c *cursor) SetCursor(cur int) {
 	*c = cursor(cur)
 }
 
+func (c cursor) GetCursor() int {
+	return int(c)
+}
+
 type gap struct {
 	offset int
 	size   int
 
 	data *[]byte
+	cursor
 }
 
 func newGap(size int, pointer *[]byte) *gap {
@@ -61,4 +66,28 @@ func calculateNewSize(size int) int {
 		result += 40
 	}
 	return result
+}
+
+func (g *gap) Left(n int) {
+	if n <= 0 || g.offset == 0 {
+		return
+	}
+
+	if n > g.offset {
+		n = g.offset
+	}
+
+	g.MoveGap(g.offset - n)
+}
+
+func (g *gap) Right(n int) {
+	if n <= 0 || g.lastIndex() == len(*g.data) {
+		return
+	}
+
+	if g.lastIndex()+n > len(*g.data) {
+		n = len(*g.data) - g.lastIndex()
+	}
+
+	g.MoveGap(g.offset + n)
 }
