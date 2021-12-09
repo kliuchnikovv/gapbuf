@@ -39,19 +39,19 @@ func TestInsert(t *testing.T) {
 	}
 
 	for _, tC := range testCases {
-		buffer := NewFromString(tC.init)
+		buffer := New([]byte(tC.init)...)
 		t.Run(tC.desc, func(t *testing.T) {
 			switch tC.action {
 			case Insert:
-				buffer.MoveGap(tC.cursor)
+				buffer.SetCursor(tC.cursor)
 				buffer.Insert([]byte(tC.str)...)
 			case Delete:
-				buffer.MoveGap(tC.cursor)
-				buffer.Delete(1)
+				buffer.SetCursor(tC.cursor)
+				buffer.Delete()
 			}
 			assert.Equal(t, tC.result, string(buffer.Bytes()))
 
-			fmt.Printf("Result %s, (raw %s)\n", buffer.Bytes(), buffer.rawBytes())
+			fmt.Printf("Result %s\n", buffer.Bytes())
 		})
 	}
 }

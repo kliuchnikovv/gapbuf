@@ -1,69 +1,68 @@
 package gapbuf
 
-import "bytes"
+import (
+	"github.com/KlyuchnikovV/gapbuf/gap"
+)
 
 type GapBuffer struct {
 	data []byte
-	gap
+	gap.Gap
 }
 
-func New(size int) *GapBuffer {
-	var buffer = GapBuffer{
-		data: make([]byte, size),
-	}
-	buffer.gap = *newGap(size, &buffer.data)
+func New(bytes ...byte) *GapBuffer {
+	var (
+		size   = calculateNewSize(len(bytes))
+		buffer = GapBuffer{
+			data: make([]byte, size),
+		}
+	)
+	buffer.Gap = *gap.New(size, &buffer.data)
+
+	buffer.Insert(bytes...)
 
 	return &buffer
 }
 
-func NewFromString(str string) *GapBuffer {
-	var buffer = New(calculateNewSize(len(str)))
-	buffer.Insert([]byte(str)...)
-	return buffer
-}
-
 func (buffer *GapBuffer) Insert(bytes ...byte) {
-	if int(buffer.cursor) != buffer.offset {
-		buffer.MoveGap(int(buffer.cursor))
-	}
-	if buffer.size == 0 {
-		// Extend buffer
+	if buffer.Gap.Size() < len(bytes) {
 		buffer.extend(len(bytes))
-	} else if buffer.firstIndex()+len(bytes) >= buffer.lastIndex() {
-		// Recursive call
-		var extraBytes = bytes[buffer.size:]
-		defer buffer.Insert(extraBytes...)
-
-		bytes = bytes[:buffer.size]
 	}
 
 	for _, char := range bytes {
-		buffer.setByte(char)
+		if char == 0 {
+			break
+		}
+		buffer.Gap.Insert(char)
 	}
-}
-
-func (buffer *GapBuffer) Delete(n int) {
-	if buffer.firstIndex() == 0 || n <= 0 {
-		return
-	}
-	if int(buffer.cursor) != buffer.offset {
-		buffer.MoveGap(int(buffer.cursor))
-	}
-	buffer.offset--
-	buffer.size++
 }
 
 func (buffer *GapBuffer) Split() []byte {
-	var result = make([]byte, len(buffer.data)-int(buffer.cursor))
-	copy(result, buffer.data[buffer.cursor:])
-	buffer.data = buffer.data[:buffer.cursor]
-	return result
+	var (
+		cursor = buffer.GetCursor()
+		data   = buffer.Bytes()
+	)
+
+	buffer.Gap = *gap.New(len(buffer.data), &buffer.data)
+
+	buffer.Insert(data[:cursor]...)
+
+	buffer.SetCursor(cursor)
+
+	return data[cursor:]
 }
 
 func (buffer *GapBuffer) Bytes() []byte {
+	if buffer.Gap.Size() == 0 {
+		return buffer.data
+	}
+
+	if buffer.Offset() == buffer.Size() {
+		return buffer.data[:buffer.Offset()]
+	}
+
 	return append(
-		buffer.data[:buffer.firstIndex()],
-		buffer.data[buffer.lastIndex():]...,
+		buffer.data[:buffer.Gap.Offset()],
+		buffer.data[buffer.Gap.LastIndex():]...,
 	)
 }
 
@@ -72,37 +71,44 @@ func (buffer *GapBuffer) String() string {
 }
 
 func (buffer *GapBuffer) Size() int {
-	return len(buffer.data) - buffer.size
-}
-
-func (buffer *GapBuffer) rawBytes() []byte {
-	var result = make([]byte, len(buffer.data))
-	copy(result, buffer.data)
-
-	return append(
-		result[:buffer.firstIndex()],
-		append(
-			bytes.Repeat([]byte{'.'}, buffer.size),
-			result[buffer.lastIndex():]...,
-		)...,
-	)
+	var size = len(buffer.data)
+	if size-buffer.Gap.Size() < 0 {
+		return size
+	}
+	return size - buffer.Gap.Size()
 }
 
 func (buffer *GapBuffer) extend(extendSize int) {
+	if extendSize == 0 {
+		return
+	}
 	var (
+		cursor     = buffer.GetCursor()
 		actualSize = len(buffer.data) + extendSize
 		newSize    = calculateNewSize(actualSize)
+		data       = buffer.Bytes()
 	)
 
-	buffer.size = newSize - actualSize
+	buffer.data = make([]byte, newSize)
+	buffer.Gap = *gap.New(newSize, &buffer.data)
 
-	var newSlice = make([]byte, actualSize)
-	copy(newSlice, buffer.data[:buffer.offset])
+	buffer.Insert(data...)
+	buffer.SetCursor(cursor)
+}
 
-	for i, char := range buffer.data[buffer.offset:] {
-		newSlice[buffer.lastIndex()+i] = char
+func calculateNewSize(size int) int {
+	var result = size
+	switch {
+	case size == 0:
+		result = 0
+	case size <= 10:
+		result = 10
+	case size <= 20:
+		result = 20
+	case size <= 40:
+		result = 40
+	default:
+		result += 40
 	}
-
-	buffer.data = newSlice
-	buffer.gap.data = &buffer.data
+	return result
 }
