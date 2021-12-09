@@ -5,7 +5,6 @@ import (
 )
 
 type GapBuffer struct {
-	data []byte
 	gap.Gap
 }
 
@@ -13,10 +12,9 @@ func New(bytes ...byte) *GapBuffer {
 	var (
 		size   = calculateNewSize(len(bytes))
 		buffer = GapBuffer{
-			data: make([]byte, size),
+			Gap: *gap.New(size),
 		}
 	)
-	buffer.Gap = *gap.New(size, &buffer.data)
 
 	buffer.Insert(bytes...)
 
@@ -42,7 +40,7 @@ func (buffer *GapBuffer) Split() []byte {
 		data   = buffer.Bytes()
 	)
 
-	buffer.Gap = *gap.New(len(buffer.data), &buffer.data)
+	buffer.Gap = *gap.New(len(buffer.Data))
 
 	buffer.Insert(data[:cursor]...)
 
@@ -52,18 +50,27 @@ func (buffer *GapBuffer) Split() []byte {
 }
 
 func (buffer *GapBuffer) Bytes() []byte {
+
 	if buffer.Gap.Size() == 0 {
-		return buffer.data
+		var result = make([]byte, len(buffer.Gap.Data))
+		copy(result, buffer.Data)
+		return result
 	}
 
 	if buffer.Offset() == buffer.Size() {
-		return buffer.data[:buffer.Offset()]
+		var result = make([]byte, buffer.Offset())
+		copy(result, buffer.Data[:buffer.Offset()])
+		return result
 	}
 
-	return append(
-		buffer.data[:buffer.Gap.Offset()],
-		buffer.data[buffer.Gap.LastIndex():]...,
-	)
+	var result = make([]byte, buffer.Size())
+	copy(result, buffer.Data[:buffer.Gap.Offset()])
+
+	for i, char := range buffer.Data[buffer.Gap.LastIndex():] {
+		result[buffer.Gap.Offset()+i] = char
+	}
+
+	return result
 }
 
 func (buffer *GapBuffer) String() string {
@@ -71,7 +78,7 @@ func (buffer *GapBuffer) String() string {
 }
 
 func (buffer *GapBuffer) Size() int {
-	var size = len(buffer.data)
+	var size = len(buffer.Data)
 	if size-buffer.Gap.Size() < 0 {
 		return size
 	}
@@ -84,13 +91,13 @@ func (buffer *GapBuffer) extend(extendSize int) {
 	}
 	var (
 		cursor     = buffer.GetCursor()
-		actualSize = len(buffer.data) + extendSize
+		actualSize = len(buffer.Data) + extendSize
 		newSize    = calculateNewSize(actualSize)
 		data       = buffer.Bytes()
 	)
 
-	buffer.data = make([]byte, newSize)
-	buffer.Gap = *gap.New(newSize, &buffer.data)
+	buffer.Data = make([]byte, newSize)
+	buffer.Gap = *gap.New(newSize)
 
 	buffer.Insert(data...)
 	buffer.SetCursor(cursor)

@@ -1,7 +1,7 @@
 package gap
 
 func (g Gap) sizeOfData() int {
-	return len(*g.data) - g.size
+	return len(g.Data) - g.size
 }
 
 func (g Gap) LastIndex() int {
@@ -10,27 +10,25 @@ func (g Gap) LastIndex() int {
 
 func (g *Gap) moveGap() {
 	if g.cursor < g.offset {
-		var bytes = (*g.data)[g.cursor:g.offset]
+		var bytes = make([]byte, g.offset-g.cursor)
+		copy(bytes, g.Data[g.cursor:g.offset])
 
-		for i, char := range bytes {
-			(*g.data)[g.cursor+g.size+i], (*g.data)[g.cursor+i] = char, (*g.data)[g.cursor+g.size+i]
+		for i, j := len(bytes)-1, 0; i >= 0; i, j = i-1, j+1 {
+			g.Data[g.LastIndex()-1-j] = bytes[i]
 		}
 	} else {
-		var bytes = (*g.data)[g.offset+g.size : g.cursor+g.size]
+		var bytes = make([]byte, g.cursor+g.size-g.LastIndex())
+		copy(bytes, g.Data[g.LastIndex() : g.cursor+g.size])
 
-		for i, char := range bytes {
-			(*g.data)[g.offset+i], (*g.data)[g.offset+g.size+i] = char, (*g.data)[g.offset+i]
+		for i := 0; i < len(bytes); i++ {
+			g.Data[g.offset+i] = bytes[i]
 		}
 	}
 
 	g.offset = g.cursor
-}
 
-///////////////////////// a             c
-//func (g *Gap) moveBytes(offset, size, secondOffset int) {
-//	var bytes = (*g.data)[offset:secondOffset]
-//
-//	for i, char := range bytes {
-//		(*g.data)[offset+size+i], (*g.data)[offset+i] = char, (*g.data)[offset+size+i]
-//	}
-//}
+	// Unnecessary
+	for i := 0; i < g.size; i++ {
+		g.Data[g.offset+i] = 0
+	}
+}
