@@ -43,11 +43,9 @@ func TestInsert(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			switch tC.action {
 			case Insert:
-				buffer.SetCursor(tC.cursor)
-				buffer.Insert([]byte(tC.str)...)
+				buffer.Insert(tC.cursor, []byte(tC.str)...)
 			case Delete:
-				buffer.SetCursor(tC.cursor)
-				buffer.Delete()
+				buffer.Delete(tC.cursor)
 			}
 			assert.Equal(t, tC.result, string(buffer.Bytes()))
 

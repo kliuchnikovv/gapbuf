@@ -16,12 +16,15 @@ func New(bytes ...byte) *GapBuffer {
 		}
 	)
 
-	buffer.Insert(bytes...)
+	buffer.Insert(0, bytes...)
 
 	return &buffer
 }
 
-func (buffer *GapBuffer) Insert(bytes ...byte) {
+func (buffer *GapBuffer) Insert(cursor int, bytes ...byte) {
+	if cursor > len(buffer.String()) {
+		cursor = len(buffer.String())
+	}
 	if buffer.Gap.Size() < len(bytes) {
 		buffer.extend(len(bytes))
 	}
@@ -30,21 +33,22 @@ func (buffer *GapBuffer) Insert(bytes ...byte) {
 		if char == 0 {
 			break
 		}
-		buffer.Gap.Insert(char)
+		buffer.Gap.Insert(cursor, char)
+		cursor++
 	}
 }
 
-func (buffer *GapBuffer) Split() []byte {
+func (buffer *GapBuffer) Split(cursor int) []byte {
 	var (
-		cursor = buffer.GetCursor()
+		// cursor = buffer.GetCursor()
 		data   = buffer.Bytes()
 	)
 
 	buffer.Gap = *gap.New(len(buffer.Data))
 
-	buffer.Insert(data[:cursor]...)
+	buffer.Insert(0, data[:cursor]...)
 
-	buffer.SetCursor(cursor)
+	// buffer.SetCursor(cursor)
 
 	return data[cursor:]
 }
@@ -90,7 +94,6 @@ func (buffer *GapBuffer) extend(extendSize int) {
 		return
 	}
 	var (
-		cursor     = buffer.GetCursor()
 		actualSize = len(buffer.Data) + extendSize
 		newSize    = calculateNewSize(actualSize)
 		data       = buffer.Bytes()
@@ -99,8 +102,7 @@ func (buffer *GapBuffer) extend(extendSize int) {
 	buffer.Data = make([]byte, newSize)
 	buffer.Gap = *gap.New(newSize)
 
-	buffer.Insert(data...)
-	buffer.SetCursor(cursor)
+	buffer.Insert(0, data...)
 }
 
 func calculateNewSize(size int) int {
