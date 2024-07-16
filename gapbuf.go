@@ -1,7 +1,7 @@
 package gapbuf
 
 import (
-	"github.com/KlyuchnikovV/gapbuf/gap"
+	"github.com/kliuchnikovv/gapbuf/gap"
 )
 
 type GapBuffer struct {
@@ -41,7 +41,7 @@ func (buffer *GapBuffer) Insert(cursor int, bytes ...byte) {
 func (buffer *GapBuffer) Split(cursor int) []byte {
 	var (
 		// cursor = buffer.GetCursor()
-		data   = buffer.Bytes()
+		data = buffer.Bytes()
 	)
 
 	buffer.Gap = *gap.New(len(buffer.Data))
